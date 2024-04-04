@@ -1,0 +1,12 @@
+{
+    "data": [
+        {
+            "apellido": {"type": "string"},
+            "cedula": {"type": "string"},
+            "contrasena": {"type": "string"},
+            "email": {"type": "string"},
+            "nombre": {"type": "string"}
+        }
+    ],
+    "status": {"type": "number"}
+}
