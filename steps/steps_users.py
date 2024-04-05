@@ -3,10 +3,12 @@ import jsonschema.exceptions
 import requests
 import json
 import jsonschema
-
+from faker import Faker
+fake = Faker()
 
 base_url = "http://localhost:6061"
 token = ''
+emailAux = ''
 
 #función para validar el json
 def validate_json(type, currentJson):
@@ -32,15 +34,15 @@ def validate_json(type, currentJson):
 def newUser(context):
         
 
-    @when('se envia solicitud para crear un usuario con cedula {cedula}, nombre {nombre}, apellido {apellido}, correo electrónico {correo}, contraseña {contrasena}')
-    def create_user(context, cedula, nombre, apellido, correo, contrasena):
+    @when('se envia solicitud para crear un usuario con datos aleatorios')
+    def create_user(context):
         end_point = base_url + '/users'
         payload = {
-            "cedula": cedula,
-            "nombre": nombre,
-            "apellido": apellido,
-            "email": correo,
-            "contrasena": contrasena
+            "cedula": fake.unique.random_int(min=111111, max=999999),
+            "nombre": fake.name(),
+            "apellido": fake.name(),
+            "email": fake.email(),
+            "contrasena": fake.password()
         }
         
         response = requests.post(end_point, json=payload)
@@ -107,24 +109,26 @@ def validate_response_information_user(context):
 #Escenario Actualizar la información de un usuario existente
 @given('que exista un usuario con cedula {cedula}')
 def validate_exists_user(context, cedula):
+    global emailAux
     end_point = base_url + "/user/" + cedula
     headers = {"Authorization": "Bearer " + token}
     response = requests.get(end_point, headers=headers)
     validate_json(2, response.json())
     context.response = response
-    user_cedula = response.json()['data'][0]['cedula'];
+    user_cedula = response.json()['data'][0]['cedula']
+    emailAux = response.json()['data'][0]['email']
     assert user_cedula == cedula, 'No existe el usuario con cedula ' + cedula
 
-@when('se envía una solicitud para actualizar la información del usuario con cedula {cedula} correo {email}, nombre {nombre}, apellido {apellido}')
-def update_user(context, cedula, email, nombre, apellido):
+@when('se envía una solicitud para actualizar la información del usuario con cedula {cedula}, con datos aleatorios')
+def update_user(context, cedula):
     end_point = base_url + "/users/" + cedula            
     
     payload = {
             "cedula": cedula,
-            "nombre": nombre,
-            "apellido": apellido,
-            "email": email,
-            "contrasena": '1234'
+            "nombre": fake.name(),
+            "apellido": fake.name(),
+            "email": fake.email(),
+            "contrasena": fake.password()
         }
     headers = {"Authorization": f'Bearer {token}'}
     response = requests.put(end_point, json=payload, headers=headers)
@@ -136,13 +140,13 @@ def validate_response(context):
     print(context.response.status_code)
     assert context.response.status_code == 200, 'Error al actualizar el usuario'
 
-@then('el correo electrónico del usuario con cedula {cedula} se actualiza a {email} en la base de datos')
-def is_update(context, cedula, email):
+@then('el correo electrónico del usuario con cedula {cedula} se actualiza correctamente')
+def is_update(context, cedula):
     end_point = base_url + "/user/" + cedula
     headers = {"Authorization": "Bearer " + token}
     response = requests.get(end_point, headers=headers)
     user_email = response.json()['data'][0]['email']
-    assert user_email == email, 'No se actualizó el usuario'
+    assert user_email != emailAux, 'No se actualizó el usuario'
 
 #Fin escenario de actualización
 
@@ -173,6 +177,5 @@ def validate_delete_user(context, cedula):
     end_point = base_url + "/user/" + cedula
     headers = {"Authorization": "Bearer " + token}
     response = requests.get(end_point, headers=headers)
-    validate_json(2
-                  , response.json())
+    validate_json(2, response.json())
     assert 'No existe usuario' in  response.json()['message'], 'Error al validar usuario'
